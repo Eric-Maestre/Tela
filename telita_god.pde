@@ -3,18 +3,22 @@
 // ZONA DE VARIABLES Y OBJETOS
 
 // LOS OBJETOS
-int numero_particulas = 25;
-int anchura = 5; //numero particulas de lado a lado tela
-int altura = 5; // numero particulas de arriba a abajo
+int num_particsY = 7;
+int num_particsX = 7;
 int distanciaX = 100;
-int distanciaY = 25; 
-int numero_muelles = 4;
-particula[] particulaArray = new particula[numero_particulas];
-muelle[] muelleArray = new muelle[numero_muelles];
+int distanciaY = 50;
+particula[][] particulaArray = new particula[num_particsX][num_particsY];
+int num_muellesX = (num_particsY-1)*num_particsX;
+int num_muellesY = (num_particsX-1)*num_particsY;
+int num_muelles =  num_muellesX+ num_muellesY;
+muelle[] muelleArray = new muelle[num_muelles];
 // DELTA TIEMPO
 float inc_t;
 
-// ZONA DE FUNCIONES
+boolean euler_activated;
+boolean wind_activated;
+boolean wind_right;
+boolean wind_left;
 
 
 
@@ -23,73 +27,135 @@ float inc_t;
 // ZONA DE SETUP
 void setup() {
   // Ventana
-  size(800, 600);
-  // Llamo a los constructores de las particulas
-  
-  
-  for(int i = 0; i < numero_particulas; i+=0)
-  {
-    for(int k = 0; k  < altura*distanciaY; k += distanciaY)
-    {
-  for(int j = 0; j < anchura*distanciaX; j+=distanciaX)
-  {
-    if(i !=0 || i != anchura - 1 || i != (anchura*altura) - anchura || i != anchura*altura - 1)
-            particulaArray[i] = new particula(new PVector((width/2.0 - 200.0)+j, (height/2.0)+k), new PVector (0.0,0.0), 1.0,10.0, 0.3,color(255,0,0),false); 
-    else
-      particulaArray[i] = new particula(new PVector((width/2.0 - 200.0)+j, (height/2.0)+k), new PVector (0.0,0.0), 1.0,10.0, 0.3,color(255,0,0),true); 
-      
-      i++;
-  }
-  
-  }
-  particulaArray[0].estatica = false; //extremo izquierdo superior
-  particulaArray[4].estatica = false; //extremo derecho superior 
-  particulaArray[20].estatica = false; //extremo izquierdo inferior
-  particulaArray[24].estatica = false; //extremo derecho inferior
+  size(1200, 1000, P3D);
+  // Inicializar las particulas
+  for (int i=0; i<num_particsX; i++) {
+    for (int j=0; j<num_particsY; j++) {
+      if ((i == 0 && j== 0) || (i == num_particsX -1 && j == 0) || j == 0 )
+      {
+        particulaArray[i][j] = new particula(new PVector((200.0)+ 100* i, (200.0)+ 50 * j), new PVector (0.0, 0.0), 10.0, 30.0, 0.5, color(255, 0, 0), true);
+      } else
+        particulaArray[i][j] = new particula(new PVector((200.0)+ 100 * i, (200.0)+ 50 * j), new PVector (0.0, 0.0), 10.0, 30.0, 0.5, color(255, 0, 0), false);
+    }
   }
   //Inicializar los muelles
-  muelleArray[0] = new muelle(new PVector(50.0,100.0),0.2,color(255,255,0));
-  muelleArray[1] = new muelle(new PVector(50.0,100.0),0.2,color(255,255,0));
-  muelleArray[2] = new muelle(new PVector(50.0,100.0),0.2,color(255,255,0));
-  muelleArray[3] = new muelle(new PVector(50.0,100.0),0.2,color(255,255,0));
+  for (int i=0; i<num_muelles; i++) {
+    muelleArray[i]= new muelle(new PVector(75.0, 50.0), 0.5, color(255, 255, 0));
+  }
+
+  euler_activated = false;
+  wind_activated = false;
+  wind_right = false;
+  wind_left = true;
   //Tiempo
-  inc_t = 0.04;
+  inc_t = 0.5;
 }
 
 // ZONA DE DRAW
 void draw() {
-  PVector fm = new PVector(0.0,0.0);
+  PVector fm = new PVector(0.0, 0.0);
   // Fondo negro
   background(0);
   // Reset fuerzas
-  for(int i = 0; i < numero_particulas;i++){
-    particulaArray[i].fuerza.x = 0.0;
-    particulaArray[i].fuerza.y = 0.0;
+  for (int i=0; i<num_particsX; i++) {
+    for (int j=0; j<num_particsY; j++) {
+      particulaArray[i][j].fuerza.x = 0.0;
+      particulaArray[i][j].fuerza.y = 0.0;
+    }
   }
   // Calcular fuerzas muelles
-   for(int i = 0; i < numero_muelles; i++)
+  //muelles linea
+
+
+  for (int j = 1, k = 0; j < num_particsX; j++)
   {
-    fm = muelleArray[i].fuerza_que_hago(particulaArray[i],particulaArray[i + 1]);
-    particulaArray[i].fuerza.x += fm.x;
-    particulaArray[i].fuerza.y += fm.y;
-    particulaArray[i + 1].fuerza.x -= fm.x;
-    particulaArray[i + 1].fuerza.y -= fm.y;
+    for (int i = 0; i < num_particsX -1; i++)
+    {
+      fm = muelleArray[k].fuerza_que_hago(particulaArray[i][j], particulaArray[i+1][j]);
+      particulaArray[i][j].fuerza.x += fm.x;
+      particulaArray[i+1][j].fuerza.x -= fm.x;
+      k++;
+    }
   }
+  //muelles columna
+  for (int i = 0, k = num_muellesX; i < num_particsX; i++)
+  {
+    for (int j = 0; j < num_particsY - 1; j++)
+    {
+      fm = muelleArray[k].fuerza_que_hago(particulaArray[i][j], particulaArray[i][j+1]);
+      particulaArray[i][j].fuerza.y += fm.y;
+      particulaArray[i][j+1].fuerza.y -= fm.y;
+      k++;
+    }
+  }
+
+
   // Render de la escena
-  
+
   // Calcular nuevas posiciones primero
   // para pintar después
-  for (int i=0; i<numero_particulas; i++) {
-    // Mover
-    if(particulaArray[i].estatica == false){
-      particulaArray[i].muevete();
-    }
-    // Dibujar
-    particulaArray[i].pintate();
-  }
-  //Los muelles
-  for(int i = 0; i < numero_muelles; i++)
+  keyPressed();
+  if (euler_activated)
   {
-    muelleArray[i].pintate(particulaArray[i], particulaArray[i+1]);
+    for (int i=0; i<num_particsX; i++) {
+      for (int j = 0; j < num_particsY; j++)
+      {
+        // Mover
+        particulaArray[i][j].mueveteEuler();
+
+        // Dibujar
+        particulaArray[i][j].pintate();
+        textSize(26);
+        fill(0, 0, 255);
+        text("Euler's Activated", 1000, 300);
+      }
+    }
+  } else {
+    for (int i=0; i<num_particsX; i++) {
+      for (int j = 0; j < num_particsY; j++)
+      {
+        // Mover
+        particulaArray[i][j].mueveteVerlet();
+
+        // Dibujar
+        particulaArray[i][j].pintate();
+        textSize(26);
+        fill(0, 0, 255);
+        text("Verlet's Activated", 1000, 300);
+      }
+    }
   }
+  if (wind_activated && wind_right)
+  {
+    text("Wind Activated", 1000, 400);
+    text("Wind direction: Right", 1000, 500);
+  }
+else if (wind_activated && wind_left)
+{
+  text("Wind Activated", 1000, 400);
+  text("Wind direction: Left", 1000, 500);
+} else
+{
+  text("Wind Deactivated", 1000, 400);
+}
+
+//muelles linea
+
+for (int j = 0, k = 0; k< num_muellesY; j++)
+{
+  for (int i = 0; i < num_particsX-1; i++)
+  {
+
+    muelleArray[k].pintate(particulaArray[i][j], particulaArray[i+1][j]);
+    k++;
+  }
+}
+for (int i = 0, k = num_muellesX; k < num_muelles; i++)
+{
+  for (int j = 0; j < num_particsY-1; j++)
+  {
+    muelleArray[k].pintate(particulaArray[i][j], particulaArray[i][j+1]);
+    k++;
+  }
+}
 }
